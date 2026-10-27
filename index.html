@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3학년 기말시험 응시현황 보고</title>
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --line:#dfe3ea; --ink:#1d2430; --sub:#667085; --pri:#2457c5; --ok:#1b8a4b; --warn:#d9822b; --bad:#d23c3c; --muted:#b8bec9; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif; background:var(--bg); color:var(--ink); font-size:15px; }
+  header { background:var(--pri); color:#fff; padding:12px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:17px; margin:0; flex:1; }
+  header button { background:rgba(255,255,255,.18); color:#fff; border:0; }
+  main { max-width:960px; margin:0 auto; padding:12px 16px 110px; }
+  button { font:inherit; border:1px solid var(--line); background:#fff; border-radius:8px; padding:8px 12px; cursor:pointer; }
+  button.pri { background:var(--pri); color:#fff; border-color:var(--pri); }
+  button:disabled { opacity:.5; cursor:default; }
+  input, select { font:inherit; padding:8px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .tabs button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .muted { color:var(--sub); font-size:13px; }
+  .hidden { display:none !important; }
+  #login { max-width:360px; margin:60px auto; text-align:center; }
+  #login input { width:100%; font-size:24px; text-align:center; letter-spacing:6px; margin:12px 0; }
+  .pick { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .pick button { padding:14px 0; font-size:17px; font-weight:bold; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; }
+  .stat { background:#f7f9fc; border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
+  .stat b { font-size:20px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:6px; }
+  .stu { padding:10px 4px; text-align:center; border-radius:10px; line-height:1.25; }
+  .stu small { display:block; color:var(--sub); font-size:12px; }
+  .stu.abs { background:#fdecec; border-color:var(--bad); color:var(--bad); font-weight:bold; }
+  .stu.vac { background:#eee; color:var(--muted); text-decoration:line-through; cursor:default; }
+  .badge { display:inline-block; font-size:11px; padding:1px 6px; border-radius:10px; background:#e7eefc; color:var(--pri); margin-left:4px; }
+  .abs-card { border:1px solid var(--bad); border-radius:10px; padding:10px; margin-top:8px; background:#fff8f8; }
+  .chip { border-radius:16px; padding:5px 12px; }
+  .chip.on { background:var(--bad); color:#fff; border-color:var(--bad); }
+  .savebar { position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid var(--line); padding:10px 16px; display:flex; gap:8px; align-items:center; z-index:6; }
+  .savebar .msg { flex:1; font-size:13px; }
+  .savebar button { padding:12px 18px; font-size:16px; }
+  .dirty { color:var(--warn); font-weight:bold; }
+  table { border-collapse:collapse; width:100%; }
+  th, td { border:1px solid var(--line); padding:6px 8px; text-align:center; font-size:14px; }
+  th { background:#f2f4f8; }
+  td.l { text-align:left; }
+  .cls { cursor:pointer; border-radius:12px; padding:10px; border:2px solid var(--line); background:#fff; }
+  .cls.none { background:#f1f2f4; }
+  .cls.late { border-color:var(--bad); background:#fff1f1; }
+  .cls.done { border-color:var(--ok); }
+  .cls.has { border-color:var(--warn); background:#fff8ef; }
+  .cls h3 { margin:0 0 4px; font-size:16px; }
+  .cgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
+  #toast { position:fixed; left:50%; top:70px; transform:translateX(-50%); background:#222; color:#fff; padding:10px 16px; border-radius:8px; z-index:20; font-size:14px; max-width:90%; }
+  .vac-list .r { display:flex; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .vac-list .r .n { width:110px; }
+  #print { display:none; }
+  @media print {
+    @page { size:A4 landscape; margin:12mm; }
+    body { background:#fff; }
+    header, main, .savebar, #toast { display:none !important; }
+    #print { display:block; font-size:18pt; }
+    #print h2 { font-size:30pt; margin:0 0 6mm; text-align:center; }
+    #print table th, #print table td { font-size:17pt; padding:3mm; border:1.5px solid #000; }
+    #print .foot { margin-top:5mm; font-size:15pt; }
+  }
+</style>
+</head>
+<body>
+<header class="hidden" id="hdr">
+  <h1 id="title">응시현황 보고</h1>
+  <button id="btnOut">나가기</button>
+</header>
+
+<div id="login" class="card">
+  <h2 style="margin:0 0 4px">3학년 기말시험<br>응시현황 보고</h2>
+  <div class="muted">2026. 10. 27.(화) ~ 10. 29.(목)</div>
+  <select id="pickGrade" style="width:100%;margin:16px 0 10px;font-size:17px"><option value="3">3학년</option></select>
+  <div class="pick" id="pickBan"></div>
+  <div id="loginErr" style="color:var(--bad);margin-top:10px"></div>
+  <details id="admBox" style="margin-top:22px;text-align:left">
+    <summary class="muted" style="cursor:pointer">관리자 현황판</summary>
+    <input id="code" type="password" inputmode="numeric" autocomplete="off" placeholder="관리자 코드">
+    <button class="pri" id="btnLogin" style="width:100%;padding:12px">현황판 열기</button>
+  </details>
+</div>
+
+<main id="app" class="hidden">
+  <div class="tabs" id="dateTabs"></div>
+
+  <!-- 관리자 현황판 -->
+  <section id="admin" class="hidden">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <b id="admTitle"></b>
+        <span class="muted" id="admTime"></span>
+      </div>
+      <div class="stats" id="admTotals" style="margin-top:10px"></div>
+    </div>
+    <div class="cgrid" id="admClasses"></div>
+    <div class="card" style="margin-top:12px">
+      <b>과목별 결시자</b>
+      <div id="admAbsent" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <b>결번 · 분리시험실</b>
+      <div id="admVacant" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <button id="btnCsv">결시기록 전체 내려받기(CSV)</button>
+      </div>
+      <div id="codeBox" class="hidden" style="margin-top:10px"></div>
+      <div style="margin-top:12px">
+        <b>전입생 추가</b>
+        <div class="row" style="margin-top:6px">
+          <select id="addBan"></select>
+          <input id="addNo" type="number" min="1" max="60" placeholder="번호" style="width:80px">
+          <input id="addName" placeholder="이름" style="width:110px">
+          <button id="btnAdd">추가</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 학급 화면 -->
+  <section id="klass" class="hidden">
+    <div class="row" id="backRow" style="margin-bottom:8px"><button id="btnBack">← 현황판</button></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <b id="klTitle" style="font-size:18px"></b>
+        <span class="muted" id="klReported"></span>
+      </div>
+      <div class="stats" id="klStats" style="margin-top:10px"></div>
+    </div>
+    <div class="tabs">
+      <button id="tabIn" class="on">응시현황 입력</button>
+      <button id="tabVac">결번 · 분리시험실 설정</button>
+    </div>
+    <div id="paneIn">
+      <div class="card">
+        <div class="muted" style="margin-bottom:8px">결시한 학생만 누르세요. 아무도 없으면 그대로 <b>보고하기</b>를 누르면 됩니다.<br>지각·조퇴로 일부 과목만 결시하면 아래에서 과목을 끄고 켜세요.</div>
+        <div class="grid" id="klGrid"></div>
+      </div>
+      <div id="klAbsent"></div>
+    </div>
+    <div id="paneVac" class="hidden">
+      <div class="card">
+        <div class="muted" style="margin-bottom:8px">전출 등으로 번호만 남은 학생은 <b>결번</b>으로 바꾸세요. 재적에서 빠지고 사흘 내내 유지됩니다. 바꾸는 즉시 저장됩니다.</div>
+        <div class="vac-list" id="vacList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="savebar hidden" id="savebar">
+  <div class="msg" id="saveMsg"></div>
+  <button id="btnPrint">현황표 인쇄</button>
+  <button class="pri" id="btnSave">보고하기</button>
+</div>
+
+<div id="print"></div>
+<div id="toast" class="hidden"></div>
+
+<script>
+var S = { code:'', role:'', ban:null, exam:[], date:'', cfg:null, cls:null, absent:{}, dirty:false, dash:null };
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+function toast(m, ms) { var t = $('toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.add('hidden'); }, ms || 2500); }
+// Apps Script 주소로 열면 google.script.run, GitHub Pages 로 열면 fetch(doPost)
+var ENDPOINT = 'https://script.google.com/macros/s/AKfycbw9sCBDMOOIXE1olNHAkjtTeN-p6qoHX96EUvhQMLxJBz2578X-TpfM444f2rUN6vTifA/exec';
+function call(fn) {
+  var args = [].slice.call(arguments, 1);
+  if (!(window.google && google.script && google.script.run)) {
+    return fetch(ENDPOINT, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) })
+      .catch(function () { throw new Error('서버에 연결하지 못했습니다. 잠시 뒤 다시 눌러 주세요.'); })
+      .then(function (r) { return r.json(); })
+      .then(function (r) { if (!r.ok) throw new Error(r.error); return r.data; });
+  }
+  return new Promise(function (ok, no) {
+    var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { no(e); });
+    r[fn].apply(r, args);
+  });
+}
+function fail(e) { toast('⚠ ' + (e && e.message || e), 5000); }
+function examOf(d) { return S.exam.filter(function (e) { return e.date === d; })[0]; }
+
+// ── 로그인 ──
+$('btnLogin').onclick = login;
+$('code').onkeydown = function (e) { if (e.key === 'Enter') login(); };
+$('pickBan').innerHTML = Array.from({ length: 11 }, function (_, i) { return '<button data-b="' + (i + 1) + '">' + (i + 1) + '반</button>'; }).join('');
+[].forEach.call($('pickBan').children, function (b) { b.onclick = function () { enter('', Number(b.dataset.b)); }; });
+function login() {
+  var code = $('code').value.trim();
+  if (code) enter(code, null);
+}
+// code 가 있으면 관리자, 없으면 고른 반(ban)으로 들어간다
+function enter(code, ban) {
+  $('btnLogin').disabled = true; $('loginErr').textContent = '';
+  call('apiLogin', code).then(function (r) {
+    S.code = code; S.role = r.role; S.ban = r.role === 'admin' ? null : ban; S.exam = r.exam; S.date = r.today; S.cfg = r;
+    try { sessionStorage.setItem('enter', JSON.stringify({ code: code, ban: ban })); } catch (e) {}
+    $('login').classList.add('hidden'); $('hdr').classList.remove('hidden'); $('app').classList.remove('hidden');
+    $('btnOut').textContent = S.role === 'admin' ? '나가기' : '반 바꾸기';
+    $('addBan').innerHTML = Array.from({ length: r.classCount }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '반</option>'; }).join('');
+    drawDateTabs();
+    if (S.role === 'admin') showAdmin(); else openClass(S.ban);
+  }).catch(function (e) { $('loginErr').textContent = e.message || e; })
+    .then(function () { $('btnLogin').disabled = false; });
+}
+$('btnOut').onclick = function () {
+  if (S.dirty && !window.confirm('보고하지 않은 내용이 있습니다. 나갈까요?')) return;
+  S.dirty = false;
+  try { sessionStorage.removeItem('enter'); } catch (e) {}
+  location.reload();
+};
+window.onbeforeunload = function () { if (S.dirty) return '보고하지 않은 내용이 있습니다.'; };
+
+function drawDateTabs() {
+  $('dateTabs').innerHTML = S.exam.map(function (e) {
+    return '<button data-d="' + e.date + '" class="' + (e.date === S.date ? 'on' : '') + '">' + e.label + ' · ' + e.subjects.map(function (x) { return x.s; }).join('·') + '</button>';
+  }).join('');
+  [].forEach.call($('dateTabs').children, function (b) {
+    b.onclick = function () {
+      if (S.dirty && !window.confirm('보고하지 않은 내용이 있습니다. 날짜를 바꿀까요?')) return;
+      S.date = b.dataset.d; S.dirty = false; drawDateTabs();
+      if (!$('klass').classList.contains('hidden')) openClass(S.cls.ban); else showAdmin();
+    };
+  });
+}
+
+// ── 학급 화면 ──
+function openClass(ban) {
+  $('admin').classList.add('hidden'); $('klass').classList.remove('hidden'); $('savebar').classList.remove('hidden');
+  $('backRow').classList.toggle('hidden', S.role !== 'admin');
+  $('title').textContent = '3학년 ' + ban + '반 응시현황';
+  $('klGrid').innerHTML = '<span class="muted">불러오는 중…</span>';
+  call('apiClass', S.code, ban, S.date).then(function (r) {
+    S.cls = r; S.dirty = false;
+    S.absent = JSON.parse(JSON.stringify(r.report ? r.report.absent : {}));
+    drawClass();
+  }).catch(fail);
+}
+$('btnBack').onclick = function () {
+  if (S.dirty && !window.confirm('보고하지 않은 내용이 있습니다. 돌아갈까요?')) return;
+  S.dirty = false; showAdmin();
+};
+$('tabIn').onclick = function () { setTab(true); };
+$('tabVac').onclick = function () { setTab(false); };
+function setTab(isIn) {
+  $('tabIn').classList.toggle('on', isIn); $('tabVac').classList.toggle('on', !isIn);
+  $('paneIn').classList.toggle('hidden', !isIn); $('paneVac').classList.toggle('hidden', isIn);
+}
+
+function counts() {
+  var ex = examOf(S.date), st = S.cls.students;
+  var enrolled = st.filter(function (s) { return !s.vacant; });
+  return {
+    listed: st.length, enrolled: enrolled.length,
+    vacant: st.filter(function (s) { return s.vacant; }),
+    separate: enrolled.filter(function (s) { return s.separate; }),
+    bySub: ex.subjects.map(function (x) {
+      var ab = enrolled.filter(function (s) { var a = S.absent[s.id]; return a && a.subjects.indexOf(x.s) >= 0; });
+      return { p: x.p, s: x.s, absent: ab, sit: enrolled.length - ab.length };
+    })
+  };
+}
+
+function drawClass() {
+  var ex = examOf(S.date), c = counts(), r = S.cls;
+  $('klTitle').textContent = '3학년 ' + r.ban + '반 · ' + ex.label;
+  $('klReported').innerHTML = r.report ? '보고 ' + esc(r.report.at.slice(11, 16)) : '<span style="color:var(--bad)">미보고</span>';
+  $('klStats').innerHTML = '<div class="stat">재적<br><b>' + c.enrolled + '</b>명' + (c.vacant.length ? ' <span class="muted">(결번 ' + c.vacant.length + ')</span>' : '') + '</div>' +
+    c.bySub.map(function (x) { return '<div class="stat">' + x.p + '교시 ' + esc(x.s) + '<br><b>' + x.sit + '</b>명 응시' + (x.absent.length ? ' <span style="color:var(--bad)">결시 ' + x.absent.length + '</span>' : '') + '</div>'; }).join('');
+
+  $('klGrid').innerHTML = r.students.map(function (s) {
+    var cls = s.vacant ? 'vac' : (S.absent[s.id] ? 'abs' : '');
+    return '<button class="stu ' + cls + '" data-id="' + s.id + '"' + (s.vacant ? ' disabled' : '') + '>' + s.no + '<small>' + esc(s.name) + '</small>' +
+      (s.separate ? '<span class="badge">분리</span>' : '') + (s.vacant ? '<small>결번</small>' : '') + '</button>';
+  }).join('');
+  [].forEach.call($('klGrid').querySelectorAll('.stu:not(.vac)'), function (b) {
+    b.onclick = function () {
+      var id = b.dataset.id;
+      if (S.absent[id]) delete S.absent[id];
+      else S.absent[id] = { subjects: ex.subjects.map(function (x) { return x.s; }), reason: '질병', memo: '' };
+      markDirty(); drawClass();
+    };
+  });
+
+  var ids = r.students.filter(function (s) { return S.absent[s.id] && !s.vacant; });
+  $('klAbsent').innerHTML = ids.length ? '<div class="card"><b>결시 학생 ' + ids.length + '명</b>' + ids.map(function (s) {
+    var a = S.absent[s.id];
+    return '<div class="abs-card" data-id="' + s.id + '"><div class="row" style="justify-content:space-between"><b>' + s.no + '번 ' + esc(s.name) + '</b><button data-act="del">취소</button></div>' +
+      '<div class="row" style="margin-top:6px">결시 과목: ' + ex.subjects.map(function (x) {
+        return '<button class="chip ' + (a.subjects.indexOf(x.s) >= 0 ? 'on' : '') + '" data-sub="' + esc(x.s) + '">' + x.p + '교시 ' + esc(x.s) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="row" style="margin-top:6px">사유 <select data-act="reason">' + S.cfg.absentReasons.map(function (o) { return '<option' + (o === a.reason ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>' +
+      '<input data-act="memo" placeholder="메모(예: 3교시부터 응시, 조퇴)" style="flex:1;min-width:160px" value="' + esc(a.memo) + '"></div></div>';
+  }).join('') + '</div>' : '';
+  [].forEach.call($('klAbsent').querySelectorAll('.abs-card'), function (box) {
+    var id = box.dataset.id, a = S.absent[id];
+    box.querySelector('[data-act=del]').onclick = function () { delete S.absent[id]; markDirty(); drawClass(); };
+    [].forEach.call(box.querySelectorAll('[data-sub]'), function (b) {
+      b.onclick = function () {
+        var k = a.subjects.indexOf(b.dataset.sub);
+        if (k >= 0) a.subjects.splice(k, 1); else a.subjects.push(b.dataset.sub);
+        if (!a.subjects.length) delete S.absent[id];
+        markDirty(); drawClass();
+      };
+    });
+    box.querySelector('[data-act=reason]').onchange = function (e) { a.reason = e.target.value; markDirty(); };
+    box.querySelector('[data-act=memo]').oninput = function (e) { a.memo = e.target.value; markDirty(false); };
+  });
+
+  drawVac();
+  drawSaveMsg();
+}
+
+function markDirty() { S.dirty = true; drawSaveMsg(); }
+function drawSaveMsg() {
+  var r = S.cls.report;
+  $('saveMsg').innerHTML = S.dirty ? '<span class="dirty">● 아직 보고하지 않았습니다</span>' :
+    (r ? '✔ ' + esc(r.at.slice(5, 16)) + ' 보고됨' : '<span style="color:var(--bad)">아직 보고 전입니다</span>');
+}
+
+$('btnSave').onclick = function () {
+  var b = $('btnSave'); b.disabled = true; b.textContent = '보고 중…';
+  call('apiSave', S.code, S.cls.ban, S.date, S.absent).then(function (r) {
+    S.cls.report = { at: r.at, absent: r.absent };
+    S.absent = JSON.parse(JSON.stringify(r.absent)); S.dirty = false;
+    drawClass(); toast('보고했습니다 (' + r.at.slice(11, 16) + ')');
+  }).catch(fail).then(function () { b.disabled = false; b.textContent = '보고하기'; });
+};
+
+function drawVac() {
+  var vr = S.cfg.vacantReasons;
+  $('vacList').innerHTML = S.cls.students.map(function (s) {
+    return '<div class="r" data-id="' + s.id + '"><span class="n">' + s.no + '번 ' + esc(s.name) + '</span>' +
+      '<select data-k="st"><option value="0"' + (s.vacant ? '' : ' selected') + '>재적</option><option value="1"' + (s.vacant ? ' selected' : '') + '>결번</option></select>' +
+      '<select data-k="rs"' + (s.vacant ? '' : ' class="hidden"') + '>' + vr.map(function (o) { return '<option' + (o === s.vacantReason ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>' +
+      '<label class="muted"><input type="checkbox" data-k="sep"' + (s.separate ? ' checked' : '') + '> 분리시험실</label>' +
+      '<input data-k="room" placeholder="시험실" style="width:150px" value="' + esc(s.separate) + '"' + (s.separate ? '' : ' class="hidden"') + '></div>';
+  }).join('');
+  [].forEach.call($('vacList').querySelectorAll('.r'), function (row) {
+    var id = row.dataset.id, q = function (k) { return row.querySelector('[data-k=' + k + ']'); };
+    function save() {
+      var vac = q('st').value === '1';
+      var room = q('sep').checked ? (q('room').value.trim() || '분리시험실') : '';
+      if (vac && S.absent[id]) { delete S.absent[id]; S.dirty = true; }
+      call('apiSetStatus', S.code, id, vac, q('rs').value, room).then(function (s) {
+        var k = S.cls.students.findIndex(function (x) { return x.id === id; });
+        S.cls.students[k] = s; drawClass(); setTab(false);
+        toast(s.no + '번 ' + s.name + ': ' + (s.vacant ? '결번(' + s.vacantReason + ')' : '재적') + (s.separate ? ' · 분리시험실' : '') + ' 저장');
+      }).catch(fail);
+    }
+    q('st').onchange = save; q('rs').onchange = save; q('sep').onchange = save; q('room').onchange = save;
+  });
+}
+
+// ── 응시현황표 인쇄 ──
+$('btnPrint').onclick = function () {
+  if (S.dirty) toast('보고하지 않은 내용도 그대로 인쇄됩니다. 보고하기도 눌러 주세요.', 4000);
+  var ex = examOf(S.date), c = counts();
+  var rsn = function (s) { var a = S.absent[s.id]; return a.reason + (a.memo ? '(' + a.memo + ')' : ''); };
+  $('print').innerHTML = '<h2>3학년 ' + S.cls.ban + '반 응시현황 · ' + ex.label + '</h2>' +
+    '<table><tr><th>교시</th><th>과목</th><th>재적</th><th>응시</th><th>결시</th><th>결시 학생(번호 이름 사유)</th></tr>' +
+    c.bySub.map(function (x) {
+      return '<tr><td>' + x.p + '</td><td>' + esc(x.s) + '</td><td>' + c.enrolled + '</td><td>' + x.sit + '</td><td>' + x.absent.length + '</td><td class="l">' +
+        (x.absent.map(function (s) { return s.no + ' ' + esc(s.name) + ' ' + esc(rsn(s)); }).join(', ') || '-') + '</td></tr>';
+    }).join('') + '</table>' +
+    '<div class="foot">결번: ' + (c.vacant.map(function (s) { return s.no + '번 ' + esc(s.name) + '(' + esc(s.vacantReason) + ')'; }).join(', ') || '없음') + '</div>' +
+    '<div class="foot">분리시험실 응시: ' + (c.separate.map(function (s) { return s.no + '번 ' + esc(s.name) + '(' + esc(s.separate) + ')'; }).join(', ') || '없음') + '</div>';
+  setTimeout(function () { window.print(); }, 50);
+};
+
+// ── 관리자 현황판 ──
+var timer = null;
+function showAdmin() {
+  $('klass').classList.add('hidden'); $('savebar').classList.add('hidden'); $('admin').classList.remove('hidden');
+  $('title').textContent = '3학년 응시현황 · 현황판';
+  loadDash();
+  clearInterval(timer);
+  timer = setInterval(function () { if (!$('admin').classList.contains('hidden') && !document.hidden) loadDash(); }, 30000);
+}
+function loadDash() {
+  call('apiDashboard', S.code, S.date).then(function (d) { S.dash = d; drawDash(); }).catch(fail);
+}
+function drawDash() {
+  var d = S.dash, ex = d.exam;
+  var late = d.serverTime.slice(0, 10) > d.date || (d.serverTime.slice(0, 10) === d.date && d.serverTime.slice(11, 16) >= '08:50');
+  var done = d.classes.filter(function (c) { return c.reportedAt; }).length;
+  $('admTitle').textContent = ex.label + ' · 보고 ' + done + '/' + d.classes.length + '반';
+  $('admTime').textContent = d.serverTime.slice(11, 16) + ' 기준 · 30초마다 새로고침';
+  var enrolled = d.classes.reduce(function (a, c) { return a + c.enrolled; }, 0);
+  var vac = d.classes.reduce(function (a, c) { return a + c.vacant.length; }, 0);
+  $('admTotals').innerHTML = '<div class="stat">학년 재적<br><b>' + enrolled + '</b>명' + (vac ? ' <span class="muted">(결번 ' + vac + ')</span>' : '') + '</div>' +
+    ex.subjects.map(function (x, i) {
+      var ab = d.classes.reduce(function (a, c) { return a + c.bySub[i].absent.length; }, 0);
+      return '<div class="stat">' + x.p + '교시 ' + esc(x.s) + '<br><b>' + (enrolled - ab) + '</b>명 응시 <span style="color:var(--bad)">결시 ' + ab + '</span></div>';
+    }).join('');
+  $('admClasses').innerHTML = d.classes.map(function (c) {
+    var ab = c.bySub.reduce(function (a, x) { return a + x.absent.length; }, 0);
+    var k = c.reportedAt ? (ab ? 'has' : 'done') : (late ? 'late' : 'none');
+    return '<div class="cls ' + k + '" data-b="' + c.ban + '"><h3>' + c.ban + '반 <span class="muted" style="font-weight:normal">재적 ' + c.enrolled + '</span></h3>' +
+      '<div class="muted">' + (c.reportedAt ? '보고 ' + c.reportedAt.slice(11, 16) : '<b style="color:' + (late ? 'var(--bad)' : 'var(--sub)') + '">미보고</b>') + '</div>' +
+      c.bySub.map(function (x) { return '<div>' + esc(x.s) + ' ' + (c.enrolled - x.absent.length) + (x.absent.length ? ' <span style="color:var(--bad)">(결시 ' + x.absent.length + ')</span>' : '') + '</div>'; }).join('') + '</div>';
+  }).join('');
+  [].forEach.call($('admClasses').children, function (el) { el.onclick = function () { clearInterval(timer); openClass(Number(el.dataset.b)); }; });
+
+  $('admAbsent').innerHTML = '<table><tr><th>교시</th><th>과목</th><th>반</th><th>번호</th><th>이름</th><th>사유</th><th>메모</th></tr>' +
+    (ex.subjects.map(function (x, i) {
+      return d.classes.map(function (c) {
+        return c.bySub[i].absent.map(function (a) { return '<tr><td>' + x.p + '</td><td>' + esc(x.s) + '</td><td>' + c.ban + '</td><td>' + a.no + '</td><td>' + esc(a.name) + '</td><td>' + esc(a.reason) + '</td><td class="l">' + esc(a.memo) + '</td></tr>'; }).join('');
+      }).join('');
+    }).join('') || '<tr><td colspan="7" class="muted">결시자 없음</td></tr>') + '</table>';
+
+  var vl = [];
+  d.classes.forEach(function (c) {
+    c.vacant.forEach(function (s) { vl.push('<tr><td>' + c.ban + '</td><td>' + s.no + '</td><td>' + esc(s.name) + '</td><td>결번</td><td>' + esc(s.reason) + '</td></tr>'); });
+    c.separate.forEach(function (s) { vl.push('<tr><td>' + c.ban + '</td><td>' + s.no + '</td><td>' + esc(s.name) + '</td><td>분리시험실</td><td>' + esc(s.room) + '</td></tr>'); });
+  });
+  $('admVacant').innerHTML = '<table><tr><th>반</th><th>번호</th><th>이름</th><th>구분</th><th>내용</th></tr>' + (vl.join('') || '<tr><td colspan="5" class="muted">없음</td></tr>') + '</table>' +
+    '<div class="muted" style="margin-top:6px">명단 ' + d.classes.reduce(function (a, c) { return a + c.listed; }, 0) + '명 − 결번 ' + vac + '명 = 재적 ' + enrolled + '명. 반 칸을 눌러 들어가 [결번 · 분리시험실 설정]에서 바꿀 수 있습니다.</div>';
+}
+
+$('btnCsv').onclick = function () {
+  call('apiExport', S.code).then(function (rows) {
+    var csv = rows.map(function (r) { return r.map(function (v) { v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+    a.download = '3학년_기말시험_결시기록.csv'; a.click();
+  }).catch(fail);
+};
+
+$('btnAdd').onclick = function () {
+  call('apiAddStudent', S.code, $('addBan').value, $('addNo').value, $('addName').value).then(function () {
+    toast('추가했습니다'); $('addNo').value = ''; $('addName').value = ''; loadDash();
+  }).catch(fail);
+};
+
+// 새로고침해도 다시 로그인하지 않게
+try { var saved = JSON.parse(sessionStorage.getItem('enter') || 'null'); if (saved) enter(saved.code, saved.ban); } catch (e) {}
+</script>
+</body>
+</html>
