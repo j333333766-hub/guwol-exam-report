@@ -132,7 +132,9 @@
   #toast { position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:#1a2130; color:#fff; padding:12px 18px; border-radius:12px; z-index:20; font-size:14px; max-width:calc(100% - 32px); box-shadow:0 8px 24px rgba(0,0,0,.2); }
   .allbtn { width:100%; margin-top:14px; padding:15px; font-weight:700; color:var(--brand); background:var(--brand-lt); border-color:#d5ddf3; border-radius:14px; }
   .ov table { min-width:300px; }
-  .ov th, .ov td { border:0; border-bottom:1px solid var(--line); padding:10px 4px; font-size:15px; background:none; }
+  .ov th, .ov td { border:0; border-bottom:1px solid var(--line); padding:10px 3px; font-size:15px; background:none; }
+  .ov td.nos { font-size:13px; color:var(--sub); white-space:nowrap; }
+  .ov td.vac { color:var(--bad); font-weight:700; }
   .ov thead th { font-size:12px; font-weight:600; color:var(--sub); line-height:1.25; }
   .ov tbody th { font-weight:800; }
   .ov .m { display:inline-block; margin-left:3px; font-size:12px; font-weight:700; color:var(--bad); }
@@ -540,18 +542,18 @@ var timer = null;
 function isLate(d) { var t = d.serverTime; return t.slice(0, 10) > d.date || (t.slice(0, 10) === d.date && t.slice(11, 16) >= '08:50'); }
 // classes: 서버 dashboard_ 의 반 목록. 반 줄을 누르면 아래에 명단이 펼쳐지고, 다시 누르면 닫힌다(S.open 은 새로고침에도 유지)
 function ovTable(el, ex, classes, late) {
-  var en = 0, done = 0, ab = ex.subjects.map(function () { return 0; }), cols = ex.subjects.length + 3;
+  var en = 0, done = 0, vac = 0, ab = ex.subjects.map(function () { return 0; }), cols = ex.subjects.length + 5;
   var body = classes.map(function (c) {
     var n = c.bySub.map(function (x) { return x.absent.length; }), open = !!S.open[c.ban];
-    en += c.enrolled; if (c.reportedAt) done++;
+    en += c.enrolled; vac += c.vacant.length; if (c.reportedAt) done++;
     n.forEach(function (v, i) { ab[i] += v; });
-    return '<tr class="click' + (c.reportedAt ? '' : ' none') + (open ? ' open' : '') + '" data-b="' + c.ban + '"><th><span class="chev">▶</span>' + c.ban + '반</th><td>' + c.enrolled + '</td>' +
+    return '<tr class="click' + (c.reportedAt ? '' : ' none') + (open ? ' open' : '') + '" data-b="' + c.ban + '"><th><span class="chev">▶</span>' + c.ban + '반</th><td class="nos">' + c.noFrom + '~' + c.noTo + '</td><td' + (c.vacant.length ? ' class="vac"' : '') + '>' + c.vacant.length + '</td><td>' + c.enrolled + '</td>' +
       n.map(function (v) { return '<td>' + (c.reportedAt ? (c.enrolled - v) + (v ? '<span class="m">−' + v + '</span>' : '') : '-') + '</td>'; }).join('') +
       '<td>' + (c.reportedAt ? '<span class="pill ok">' + esc(c.reportedAt.slice(11, 16)) + '</span>' : '<span class="pill ' + (late ? 'no' : 'wait') + '">미보고</span>') + '</td></tr>' +
       (open ? '<tr class="det"><td colspan="' + cols + '">' + ovDetail(c, ex) + '</td></tr>' : '');
   }).join('');
-  el.innerHTML = '<table><thead><tr><th>반</th><th>재적</th>' + ex.subjects.map(function (x) { return '<th>' + x.p + '교시<br>' + esc(x.s) + '</th>'; }).join('') + '<th>보고</th></tr></thead>' +
-    '<tbody>' + body + '</tbody><tfoot><tr><th>계</th><td>' + en + '</td>' + ab.map(function (v) { return '<td>' + (en - v) + (v ? '<span class="m">−' + v + '</span>' : '') + '</td>'; }).join('') +
+  el.innerHTML = '<table><thead><tr><th>반</th><th>번호</th><th>결번</th><th>재적</th>' + ex.subjects.map(function (x) { return '<th>' + x.p + '교시<br>' + esc(x.s) + '</th>'; }).join('') + '<th>보고</th></tr></thead>' +
+    '<tbody>' + body + '</tbody><tfoot><tr><th>계</th><td></td><td>' + vac + '</td><td>' + en + '</td>' + ab.map(function (v) { return '<td>' + (en - v) + (v ? '<span class="m">−' + v + '</span>' : '') + '</td>'; }).join('') +
     '<td>' + done + '/' + classes.length + '</td></tr></tfoot></table>';
   [].forEach.call(el.querySelectorAll('tr[data-b]'), function (tr) {
     tr.onclick = function () {
