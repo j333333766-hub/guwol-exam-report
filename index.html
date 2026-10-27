@@ -130,6 +130,18 @@
   .cls h3 { margin:0 0 4px; font-size:17px; }
   .cgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
   #toast { position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:#1a2130; color:#fff; padding:12px 18px; border-radius:12px; z-index:20; font-size:14px; max-width:calc(100% - 32px); box-shadow:0 8px 24px rgba(0,0,0,.2); }
+  .allbtn { width:100%; margin-top:14px; padding:15px; font-weight:700; color:var(--brand); background:var(--brand-lt); border-color:#d5ddf3; border-radius:14px; }
+  .ov table { min-width:300px; }
+  .ov th, .ov td { border:0; border-bottom:1px solid var(--line); padding:10px 4px; font-size:15px; background:none; }
+  .ov thead th { font-size:12px; font-weight:600; color:var(--sub); line-height:1.25; }
+  .ov tbody th { font-weight:800; }
+  .ov .m { display:inline-block; margin-left:3px; font-size:12px; font-weight:700; color:var(--bad); }
+  .ov tr.click { cursor:pointer; }
+  .ov tr.click:active { background:var(--brand-lt); }
+  .ov tr.none th, .ov tr.none td { color:var(--sub); }
+  .ov tfoot th, .ov tfoot td { font-weight:800; background:#f6f8fc; border-bottom:0; }
+  .ov .pill { font-size:12px; padding:3px 8px; }
+  .pill.wait { background:#eef0f4; color:var(--sub); }
   #print { display:none; }
   @media (min-width:600px) {
     .pick { grid-template-columns:repeat(4,1fr); }
@@ -164,6 +176,7 @@
   <div class="seg" id="pickGrade"><button class="on" data-g="3">3학년</button></div>
   <div class="lbl">반을 고르세요</div>
   <div class="pick" id="pickBan"></div>
+  <button class="allbtn" id="btnAll">전체 학급 응시현황 보기</button>
   <div id="loginErr" style="color:var(--bad);margin-top:12px"></div>
   <details id="admBox">
     <summary>관리자 현황판</summary>
@@ -176,6 +189,16 @@
   <div class="tabs" id="dateTabs"></div>
 
   <!-- 관리자 현황판 -->
+  <!-- 전체 학급 현황(코드 없이, 숫자만) -->
+  <section id="overview" class="hidden">
+    <div class="card">
+      <div class="klhead"><b id="ovTitle" style="font-size:18px"></b><span class="muted" id="ovTime"></span></div>
+      <div class="stats" id="ovTotals" style="margin-top:12px"></div>
+    </div>
+    <div class="card ov" style="padding:6px 10px"><div class="tw" id="ovTable"></div></div>
+    <div class="muted" style="text-align:center">반을 누르면 그 반 입력 화면으로 갑니다 · 30초마다 새로고침</div>
+  </section>
+
   <section id="admin" class="hidden">
     <div class="card">
       <div class="row" style="justify-content:space-between">
@@ -184,7 +207,7 @@
       </div>
       <div class="stats" id="admTotals" style="margin-top:10px"></div>
     </div>
-    <div class="cgrid" id="admClasses"></div>
+    <div class="card ov" style="padding:6px 10px"><div class="tw" id="admClasses"></div></div>
     <div class="card" style="margin-top:12px">
       <b>과목별 결시자</b>
       <div id="admAbsent" class="tw" style="margin-top:8px"></div>
@@ -212,7 +235,7 @@
 
   <!-- 학급 화면 -->
   <section id="klass" class="hidden">
-    <div class="row" id="backRow" style="margin-bottom:8px"><button id="btnBack">← 현황판</button></div>
+    <div class="row" id="backRow" style="margin-bottom:10px"><button id="btnBack" style="padding:8px 14px;font-size:14px">← 현황판</button></div>
     <div class="card">
       <div class="klhead">
         <b id="klTitle"></b>
@@ -251,7 +274,7 @@
 <div id="toast" class="hidden"></div>
 
 <script>
-var S = { code:'', role:'', ban:null, exam:[], date:'', cfg:null, cls:null, absent:{}, dirty:false, vac:{}, dash:null };
+var S = { code:'', role:'', ban:null, exam:[], date:'', cfg:null, cls:null, absent:{}, dirty:false, vac:{}, dash:null, view:'' };
 var $ = function (id) { return document.getElementById(id); };
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
 function toast(m, ms) { var t = $('toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.add('hidden'); }, ms || 2500); }
@@ -278,21 +301,22 @@ $('btnLogin').onclick = login;
 $('code').onkeydown = function (e) { if (e.key === 'Enter') login(); };
 $('pickBan').innerHTML = Array.from({ length: 11 }, function (_, i) { return '<button data-b="' + (i + 1) + '">' + (i + 1) + '<small>반</small></button>'; }).join('');
 [].forEach.call($('pickBan').children, function (b) { b.onclick = function () { enter('', Number(b.dataset.b)); }; });
+$('btnAll').onclick = function () { enter('', null); };
 function login() {
   var code = $('code').value.trim();
   if (code) enter(code, null);
 }
-// code 가 있으면 관리자, 없으면 고른 반(ban)으로 들어간다
+// code 가 있으면 관리자, 없으면 고른 반(ban)으로, 반도 없으면 전체 현황으로 들어간다
 function enter(code, ban) {
   $('btnLogin').disabled = true; $('loginErr').textContent = '';
   call('apiLogin', code).then(function (r) {
     S.code = code; S.role = r.role; S.ban = r.role === 'admin' ? null : ban; S.exam = r.exam; S.date = r.today; S.cfg = r;
     try { sessionStorage.setItem('enter', JSON.stringify({ code: code, ban: ban })); } catch (e) {}
     $('login').classList.add('hidden'); $('hdr').classList.remove('hidden'); $('app').classList.remove('hidden');
-    $('btnOut').textContent = S.role === 'admin' ? '나가기' : '반 바꾸기';
+    $('btnOut').textContent = S.role === 'admin' ? '나가기' : '처음으로';
     $('addBan').innerHTML = Array.from({ length: r.classCount }, function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '반</option>'; }).join('');
     drawDateTabs();
-    if (S.role === 'admin') showAdmin(); else openClass(S.ban);
+    if (S.role === 'admin') showAdmin(); else if (ban) openClass(ban); else showOverview();
   }).catch(function (e) { $('loginErr').textContent = e.message || e; })
     .then(function () { $('btnLogin').disabled = false; });
 }
@@ -312,15 +336,16 @@ function drawDateTabs() {
     b.onclick = function () {
       if (anyDirty() && !window.confirm('보고하지 않은 내용이 있습니다. 날짜를 바꿀까요?')) return;
       S.date = b.dataset.d; S.dirty = false; drawDateTabs();
-      if (!$('klass').classList.contains('hidden')) openClass(S.cls.ban); else showAdmin();
+      if (!$('klass').classList.contains('hidden')) openClass(S.cls.ban); else if (!$('overview').classList.contains('hidden')) showOverview(); else showAdmin();
     };
   });
 }
 
 // ── 학급 화면 ──
 function openClass(ban) {
-  $('admin').classList.add('hidden'); $('klass').classList.remove('hidden'); $('savebar').classList.remove('hidden');
-  $('backRow').classList.toggle('hidden', S.role !== 'admin');
+  clearInterval(timer);
+  $('admin').classList.add('hidden'); $('overview').classList.add('hidden'); $('klass').classList.remove('hidden'); $('savebar').classList.remove('hidden');
+  $('btnBack').textContent = S.role === 'admin' ? '← 현황판' : S.view === 'all' ? '← 전체 현황' : '전체 학급 현황 보기 →';
   $('title').textContent = '3학년 ' + ban + '반 응시현황';
   $('klGrid').innerHTML = '<span class="muted">불러오는 중…</span>';
   call('apiClass', S.code, ban, S.date).then(function (r) {
@@ -331,7 +356,8 @@ function openClass(ban) {
 }
 $('btnBack').onclick = function () {
   if (anyDirty() && !window.confirm('보고하지 않은 내용이 있습니다. 돌아갈까요?')) return;
-  S.dirty = false; S.vac = {}; showAdmin();
+  S.dirty = false; S.vac = {};
+  if (S.role === 'admin') showAdmin(); else showOverview();
 };
 $('tabIn').onclick = function () { setTab(true); };
 $('tabVac').onclick = function () { setTab(false); };
@@ -361,7 +387,7 @@ function drawClass() {
   $('klTitle').innerHTML = '3학년 ' + r.ban + '반 <span class="muted" style="font-weight:500">' + esc(ex.label) + '</span>';
   $('klReported').innerHTML = r.report ? '<span class="pill ok">✔ 보고 ' + esc(r.report.at.slice(11, 16)) + '</span>' : '<span class="pill no">미보고</span>';
   $('klStats').innerHTML = '<div class="stat">재적<b>' + c.enrolled + '<em>명</em></b>' + (c.vacant.length ? '결번 ' + c.vacant.length + '명 제외' : '') + '</div>' +
-    c.bySub.map(function (x) { return '<div class="stat">' + x.p + '교시 ' + esc(x.s) + '<b>' + x.sit + '<em>명 응시</em></b>' + (x.absent.length ? '<span class="bad">결시 ' + x.absent.length + '</span>' : '결시 없음') + '</div>'; }).join('');
+    c.bySub.map(function (x) { return '<div class="stat">' + x.p + '교시 ' + esc(x.s) + ' 응시<b>' + x.sit + '<em>명</em></b>' + (x.absent.length ? '<span class="bad">결시 ' + x.absent.length + '</span>' : '결시 없음') + '</div>'; }).join('');
 
   $('klGrid').innerHTML = r.students.map(function (s) {
     var cls = s.vacant ? 'vac' : (S.absent[s.id] ? 'abs' : '');
@@ -496,10 +522,48 @@ $('btnPrint').onclick = function () {
   setTimeout(function () { window.print(); }, 50);
 };
 
-// ── 관리자 현황판 ──
+// ── 전체 학급 현황 ──
 var timer = null;
+function isLate(d) { var t = d.serverTime; return t.slice(0, 10) > d.date || (t.slice(0, 10) === d.date && t.slice(11, 16) >= '08:50'); }
+// rows: [{ ban, enrolled, reportedAt, ab:[과목별 결시 수] }]. 행을 누르면 그 반으로
+function ovTable(el, ex, rows, late) {
+  var en = 0, done = 0, ab = ex.subjects.map(function () { return 0; });
+  var body = rows.map(function (c) {
+    en += c.enrolled; if (c.reportedAt) done++;
+    c.ab.forEach(function (n, i) { ab[i] += n; });
+    return '<tr class="click' + (c.reportedAt ? '' : ' none') + '" data-b="' + c.ban + '"><th>' + c.ban + '반</th><td>' + c.enrolled + '</td>' +
+      c.ab.map(function (n) { return '<td>' + (c.reportedAt ? (c.enrolled - n) + (n ? '<span class="m">−' + n + '</span>' : '') : '-') + '</td>'; }).join('') +
+      '<td>' + (c.reportedAt ? '<span class="pill ok">' + esc(c.reportedAt.slice(11, 16)) + '</span>' : '<span class="pill ' + (late ? 'no' : 'wait') + '">미보고</span>') + '</td></tr>';
+  }).join('');
+  el.innerHTML = '<table><thead><tr><th>반</th><th>재적</th>' + ex.subjects.map(function (x) { return '<th>' + x.p + '교시<br>' + esc(x.s) + '</th>'; }).join('') + '<th>보고</th></tr></thead>' +
+    '<tbody>' + body + '</tbody><tfoot><tr><th>계</th><td>' + en + '</td>' + ab.map(function (n) { return '<td>' + (en - n) + (n ? '<span class="m">−' + n + '</span>' : '') + '</td>'; }).join('') +
+    '<td>' + done + '/' + rows.length + '</td></tr></tfoot></table>';
+  [].forEach.call(el.querySelectorAll('tr[data-b]'), function (tr) { tr.onclick = function () { openClass(Number(tr.dataset.b)); }; });
+  return { en: en, ab: ab, done: done };
+}
+function showOverview() {
+  S.view = 'all';
+  $('klass').classList.add('hidden'); $('admin').classList.add('hidden'); $('savebar').classList.add('hidden'); $('overview').classList.remove('hidden');
+  $('title').textContent = '전체 학급 응시현황';
+  loadOv();
+  clearInterval(timer);
+  timer = setInterval(function () { if (!$('overview').classList.contains('hidden') && !document.hidden) loadOv(); }, 30000);
+}
+function loadOv() {
+  call('apiOverview', S.date).then(function (d) {
+    var ex = d.exam, late = isLate(d);
+    var t = ovTable($('ovTable'), ex, d.classes.map(function (c) { return { ban: c.ban, enrolled: c.enrolled, reportedAt: c.reportedAt, ab: c.bySub.map(function (x) { return x.absent; }) }; }), late);
+    var left = d.classes.length - t.done;
+    $('ovTitle').textContent = ex.label + ' · 보고 ' + t.done + '/' + d.classes.length + '반';
+    $('ovTime').textContent = d.serverTime.slice(11, 16) + ' 기준';
+    $('ovTotals').innerHTML = '<div class="stat">학년 재적<b>' + t.en + '<em>명</em></b>' + (left ? '<span class="bad">미보고 ' + left + '반</span>' : '모든 반 보고') + '</div>' +
+      ex.subjects.map(function (x, i) { return '<div class="stat">' + x.p + '교시 ' + esc(x.s) + ' 응시<b>' + (t.en - t.ab[i]) + '<em>명</em></b>' + (t.ab[i] ? '<span class="bad">결시 ' + t.ab[i] + '</span>' : '결시 없음') + '</div>'; }).join('');
+  }).catch(fail);
+}
+
+// ── 관리자 현황판 ──
 function showAdmin() {
-  $('klass').classList.add('hidden'); $('savebar').classList.add('hidden'); $('admin').classList.remove('hidden');
+  $('klass').classList.add('hidden'); $('overview').classList.add('hidden'); $('savebar').classList.add('hidden'); $('admin').classList.remove('hidden');
   $('title').textContent = '3학년 응시현황 · 현황판';
   loadDash();
   clearInterval(timer);
@@ -510,7 +574,7 @@ function loadDash() {
 }
 function drawDash() {
   var d = S.dash, ex = d.exam;
-  var late = d.serverTime.slice(0, 10) > d.date || (d.serverTime.slice(0, 10) === d.date && d.serverTime.slice(11, 16) >= '08:50');
+  var late = isLate(d);
   var done = d.classes.filter(function (c) { return c.reportedAt; }).length;
   $('admTitle').textContent = ex.label + ' · 보고 ' + done + '/' + d.classes.length + '반';
   $('admTime').textContent = d.serverTime.slice(11, 16) + ' 기준 · 30초마다 새로고침';
@@ -519,16 +583,9 @@ function drawDash() {
   $('admTotals').innerHTML = '<div class="stat">학년 재적<b>' + enrolled + '<em>명</em></b>' + (vac ? '결번 ' + vac + '명 제외' : '') + '</div>' +
     ex.subjects.map(function (x, i) {
       var ab = d.classes.reduce(function (a, c) { return a + c.bySub[i].absent.length; }, 0);
-      return '<div class="stat">' + x.p + '교시 ' + esc(x.s) + '<b>' + (enrolled - ab) + '<em>명 응시</em></b><span class="bad">결시 ' + ab + '</span></div>';
+      return '<div class="stat">' + x.p + '교시 ' + esc(x.s) + ' 응시<b>' + (enrolled - ab) + '<em>명</em></b><span class="bad">결시 ' + ab + '</span></div>';
     }).join('');
-  $('admClasses').innerHTML = d.classes.map(function (c) {
-    var ab = c.bySub.reduce(function (a, x) { return a + x.absent.length; }, 0);
-    var k = c.reportedAt ? (ab ? 'has' : 'done') : (late ? 'late' : 'none');
-    return '<div class="cls ' + k + '" data-b="' + c.ban + '"><h3>' + c.ban + '반 <span class="muted" style="font-weight:normal">재적 ' + c.enrolled + '</span></h3>' +
-      '<div class="muted">' + (c.reportedAt ? '보고 ' + c.reportedAt.slice(11, 16) : '<b style="color:' + (late ? 'var(--bad)' : 'var(--sub)') + '">미보고</b>') + '</div>' +
-      c.bySub.map(function (x) { return '<div>' + esc(x.s) + ' ' + (c.enrolled - x.absent.length) + (x.absent.length ? ' <span style="color:var(--bad)">(결시 ' + x.absent.length + ')</span>' : '') + '</div>'; }).join('') + '</div>';
-  }).join('');
-  [].forEach.call($('admClasses').children, function (el) { el.onclick = function () { clearInterval(timer); openClass(Number(el.dataset.b)); }; });
+  ovTable($('admClasses'), ex, d.classes.map(function (c) { return { ban: c.ban, enrolled: c.enrolled, reportedAt: c.reportedAt, ab: c.bySub.map(function (x) { return x.absent.length; }) }; }), late);
 
   $('admAbsent').innerHTML = '<table><tr><th>교시</th><th>과목</th><th>반</th><th>번호</th><th>이름</th><th>사유</th><th>메모</th></tr>' +
     (ex.subjects.map(function (x, i) {
